@@ -12,7 +12,7 @@ ID_IN_URL = re.compile(r"/[a-z]+/(\d+)/$")  # регулярка вытаски�
 
 @cached({})
 def get_session():
-    #  кеширум получение сесии, таким образом будем использовать одну сессию для всех запросов
+    #  кеширум получение сесии, используем одну сессию для всех запросов
 
     return ClientSession()
 
@@ -31,25 +31,25 @@ async def get_json(url: str) -> dict:
 
 @AsyncLRU(1024)
 async def get_json_cached(url: str):
-    # для того, чтобы не ходить дваждв по одно ссылке, запросы фильмов, планет, видов транспорта кеширум
+    # чтобы не ходить дважды по одной ссылке - кешируем запросы фильмов, планет, видов транспорта
 
     return await get_json(url)
 
 
 async def prepare_person(person_dict: dict) -> dict:
     """
-    :param person_dict: json  с одним персонажем
-    :return: словарь персонажа с подготовленными названиями фильмов, планет и т.п
+    :param person_dict: json с одним персонажем
+    :return: словарь персонажа с подготовленными названиями фильмов, планет и т.п.
     """
 
-    # создаем задачи на выгрузки фильмов, планет и т.п
+    # создаем задачи на выгрузки фильмов, планет и т.п.
     films_tasks = [asyncio.create_task(get_json_cached(url)) for url in person_dict["films"]]
     species_tasks = [asyncio.create_task(get_json_cached(url)) for url in person_dict["species"]]
     starships_tasks = [asyncio.create_task(get_json_cached(url)) for url in person_dict["starships"]]
     vehicles_tasks = [asyncio.create_task(get_json_cached(url)) for url in person_dict["vehicles"]]
     homeworld = asyncio.create_task(get_json_cached(person_dict["homeworld"]))
 
-    #  дожидаемся выгрузки и преобразуем в требуемый формат
+    # дожидаемся выгрузки и преобразуем в требуемый формат
     films = await asyncio.gather(*films_tasks)
     films_titles = ",".join(film["title"] for film in films)
 
@@ -88,7 +88,7 @@ async def get_people() -> AsyncIterator[dict]:
     swapi позволяет выгружать данные пачками постранично
     роут /api/people/ вернут json c полями
     results - в котором список персонажей
-    next - в котором ссылка на получение следующкй пачки персонажей
+    next - в котором ссылка на получение следующей пачки персонажей
     :return:
     """
 
@@ -96,14 +96,14 @@ async def get_people() -> AsyncIterator[dict]:
 
     while next_page_task:
         response = await next_page_task
-        next_page = response["next"]   # станица со слудуюей пачкой персонажей
+        next_page = response["next"]   # станица со следующей пачкой персонажей
         if next_page:
             next_page_task = asyncio.create_task(get_json(next_page))
             # сразу начинаем выгружать слудующую страницу, если она есть
 
         else:
             next_page_task = None
-        people = response["results"] # пачка пепсонажей
+        people = response["results"] # пачка персонажей
 
         # подготавливаем текущую пачку персонажей
         prepare_person_coros = [asyncio.create_task(prepare_person(person)) for person in people]

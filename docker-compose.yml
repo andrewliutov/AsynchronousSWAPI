@@ -1,0 +1,40 @@
+version: '3.9'
+
+networks:
+  dev_network:
+
+services:
+
+  db:
+    image: postgres:14.3-alpine3.15
+    ports:
+      - "5431:5432"
+    environment:
+      POSTGRES_USER: ${PG_USER}
+      POSTGRES_PASSWORD: ${PG_PASSWORD}
+      POSTGRES_DB: ${PG_DB}
+
+    networks:
+      dev_network:
+        aliases:
+          - ${PG_HOST}
+
+  app:
+    build:
+      context: .
+    environment:
+      PG_USER: ${PG_USER}
+      PG_PASSWORD: ${PG_PASSWORD}
+      PG_HOST: ${PG_HOST}
+      PG_PORT: ${PG_PORT}
+      PG_DB: ${PG_DB}
+      WAIT_HOSTS: ${PG_HOST}:${PG_PORT}
+    depends_on:
+      - db
+    networks:
+      dev_network:
+        aliases:
+          - ads
+    volumes:
+      - ./app:/app
+
